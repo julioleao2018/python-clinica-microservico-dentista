@@ -21,11 +21,16 @@ app = FastAPI(redoc_url="/v1/web/dental_clinic/redoc",
 
 origins = [
     "http://localhost",
-    "http://localhost:8081",
-    "http://localhost:8081/",
+    "http://localhost:3000",   # Frontend Next.js local
+    "http://localhost:8081",   # API local
     "http://127.0.0.1:8081",
-    "http://0.0.0.0:8081/"
-    "http://0.0.0.0:8081"
+    "http://0.0.0.0:8081",
+
+    # Produção:
+    "http://react-clinica-dental-site-sp.s3-website-sa-east-1.amazonaws.com",
+    "https://clinica-alb-XXXXXXXX.sa-east-1.elb.amazonaws.com",  # seu ALB
+    # depois, quando for mudar CloudFront/Route53:
+    # "https://meu-dominio.com",
 ]
 
 app.add_middleware(
