@@ -1,0 +1,56 @@
+Request Resumida
+
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:sieb="http://flexg-hml-planejamento.ipiranga.io/siebel-nota-fiscal">
+    <soapenv:Header />
+    <soapenv:Body>
+        <sieb:consultar>
+            <sieb:pRequest>
+                <sieb:entrada>
+                    <sieb:jdDataInicio>?</sieb:jdDataInicio>
+                    <sieb:jdDataTermino>?</sieb:jdDataTermino>
+                    <sieb:mnNumeroNF>?</sieb:mnNumeroNF>
+                    <sieb:szCodigoCliente>?</sieb:szCodigoCliente>
+                </sieb:entrada>
+            </sieb:pRequest>
+        </sieb:consultar>
+    </soapenv:Body>
+</soapenv:Envelope>
+Response Não definido ainda.
+
+
+Request Detalhada
+
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:sieb="http://flexg-hml-planejamento.ipiranga.io/siebel-nota-fiscal">
+    <soapenv:Header />
+    <soapenv:Body>
+        <sieb:consultarDetalhe>
+            <sieb:pRequest>
+                <sieb:entrada>
+                    <sieb:jdDataFatura>?</sieb:jdDataFatura>
+                    <sieb:mnNumeroNotaFiscal>?</sieb:mnNumeroNotaFiscal>
+                    <sieb:szSerieNotaFiscal>?</sieb:szSerieNotaFiscal>
+                </sieb:entrada>
+            </sieb:pRequest>
+        </sieb:consultarDetalhe>
+    </soapenv:Body>
+</soapenv:Envelope>
+Response Não definido ainda.
+
+
+Request NFE Royalties
+
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:sieb="http://flexg-hml-planejamento.ipiranga.io/siebel-nota-fiscal">
+    <soapenv:Header />
+    <soapenv:Body>
+        <nfse:consultarNFSeCajamar>
+            <nfse:pRequest>
+                <nfse:jdDataFinal>?</nfse:jdDataFinal>
+                <nfse:jdDataInicial>?</nfse:jdDataInicial>
+                <nfse:szCNPJ>?</nfse:szCNPJ>
+                <nfse:szCnpjEmissor>?</nfse:szCnpjEmissor>
+            </nfse:pRequest>
+        </nfse:consultarNFSeCajamar>
+    </soapenv:Body>
+</soapenv:Envelope>

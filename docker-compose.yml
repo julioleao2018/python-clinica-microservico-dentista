@@ -1,0 +1,23 @@
+version: "3"
+
+services:
+  api:
+    platform: linux/x86_64
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - APP_API_HOST=api
+      - PYTHONUNBUFFERED=1
+      - APP_PORT=8081
+      - APP_POSTGRESQL_DB_USERNAME=${APP_POSTGRESQL_DB_USERNAME}
+      - APP_POSTGRESQL_DB_PASSWORD=${APP_POSTGRESQL_DB_PASSWORD}
+      - APP_POSTGRESQL_DB_HOST=${APP_POSTGRESQL_DB_HOST}
+      - APP_POSTGRESQL_DB_PORT=${APP_POSTGRESQL_DB_PORT}
+      - APP_POSTGRESQL_DB_NAME=${APP_POSTGRESQL_DB_NAME}
+    entrypoint:
+      - python
+      - /home/worker/src/dental_clinic/fast_app.py
+    tty: true
+    ports:
+      - "8081:8081"

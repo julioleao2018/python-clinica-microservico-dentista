@@ -1,0 +1,43 @@
+version: 0.2
+
+env:
+  parameter-store:
+    DB_HOST: "/dental-clinic/db/host"
+    DB_PORT: "/dental-clinic/db/port"
+    DB_USER: "/dental-clinic/db/user"
+    DB_PASSWORD: "/dental-clinic/db/password"
+    DB_NAME: "/dental-clinic/db/name"
+
+phases:
+  pre_build:
+    commands:
+      - echo Fazendo login no Amazon ECR...
+      - aws --version
+      - aws ecr get-login-password --region sa-east-1 | docker login --username AWS --password-stdin 774538498664.dkr.ecr.sa-east-1.amazonaws.com
+
+      - REPOSITORY_URI=774538498664.dkr.ecr.sa-east-1.amazonaws.com/python-clinica-microservico
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+
+  build:
+    commands:
+      - echo Buildando imagem Docker...
+      - docker build --build-arg DB_HOST=$DB_HOST \
+                     --build-arg DB_PORT=$DB_PORT \
+                     --build-arg DB_USER=$DB_USER \
+                     --build-arg DB_PASSWORD=$DB_PASSWORD \
+                     --build-arg DB_NAME=$DB_NAME \
+                     -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+
+  post_build:
+    commands:
+      - echo Fazendo push para o ECR...
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+
+      - echo Criando imagedefinitions.json para ECS...
+      - printf '[{"name":"fastapi-container","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
