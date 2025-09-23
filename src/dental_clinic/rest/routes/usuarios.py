@@ -4,10 +4,10 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
-from domain.models import Usuarios
+from rest.models.usuarios import Usuarios
 from utilities.seguranca import criar_token, gerar_hash_senha, verificar_senha, verificar_token, TEMPO_EXPIRACAO_TOKEN
 from rest.database import get_db
-from rest.models import UsuarioLogin, UsuarioResposta
+from rest.schemas.usuario import UsuarioLogin, UsuarioResposta
 from util import initLog
 from datetime import datetime
 
@@ -31,7 +31,20 @@ def login(dados: UsuarioLogin = Body(...), db: Session = Depends(get_db)):
             logger.warning(f"Tentativa de login inválida para email: {dados.email}")
             raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
-        token = criar_token({"sub": str(usuario.usuario_id)})
+        # pegar a clínica principal do usuário (pode expandir para várias depois)
+        vinculo = db.execute(
+            select("clinica_id").select_from("usuarios_clinicas")
+            .where("usuario_id" == usuario.usuario_id)
+        ).first()
+
+        if not vinculo:
+            raise HTTPException(status_code=403, detail="Usuário não vinculado a nenhuma clínica")
+
+        token = criar_token({
+            "sub": str(usuario.usuario_id),
+            "clinica_id": str(vinculo.clinica_id)  # incluir tenant no JWT
+        })
+
         logger.info(f"Token gerado com sucesso para usuário: {usuario.email}")
         return {
             "access_token": token,
@@ -41,6 +54,7 @@ def login(dados: UsuarioLogin = Body(...), db: Session = Depends(get_db)):
     except SQLAlchemyError as e:
         logger.error(f"Erro ao realizar login: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro interno no servidor")
+
 
 # Criar usuário
 @router.post("/v1/web/dental_clinic/usuarios", tags=["Autenticação"], response_model=UsuarioResposta)

@@ -30,7 +30,21 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/web/dental_clinic/login")
 def verificar_token(token: str = Depends(oauth2_scheme)) -> dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
+        usuario_id: str = payload.get("sub")
+        clinica_id: str = payload.get("clinica_id")
+
+        if usuario_id is None or clinica_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token inválido ou incompleto.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        return {
+            "usuario_id": usuario_id,
+            "clinica_id": clinica_id
+        }
+
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

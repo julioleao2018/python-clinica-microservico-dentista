@@ -1,4 +1,3 @@
-# rest/models.py
 from pydantic import BaseModel, EmailStr
 
 class UsuarioLogin(BaseModel):
