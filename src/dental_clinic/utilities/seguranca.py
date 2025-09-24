@@ -31,12 +31,37 @@ def verificar_token(token: str = Depends(oauth2_scheme)) -> dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         usuario_id: str = payload.get("sub")
-        clinica_id: str = payload.get("clinica_id")
+        clinica_id: str = payload.get("clinica_id")  # pode ser None no início
+
+        if usuario_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token inválido.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        return {
+            "usuario_id": usuario_id,
+            "clinica_id": clinica_id
+        }
+
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+def verificar_token_com_clinica(token: str = Depends(oauth2_scheme)) -> dict:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        usuario_id: str = payload.get("sub")
+        clinica_id: str | None = payload.get("clinica_id")
 
         if usuario_id is None or clinica_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token inválido ou incompleto.",
+                detail="Token inválido: é necessário estar vinculado a uma clínica.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 

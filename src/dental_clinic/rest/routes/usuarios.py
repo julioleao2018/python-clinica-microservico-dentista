@@ -10,6 +10,7 @@ from rest.database import get_db
 from rest.schemas.usuario import UsuarioLogin, UsuarioResposta
 from util import initLog
 from datetime import datetime
+from rest.models.usuarios_clinicas import UsuariosClinicas
 
 router = APIRouter()
 logger = initLog(__name__)
@@ -23,6 +24,38 @@ def get_healthcheck():
     return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "UP"})
 
 # Login
+# @router.post("/v1/web/dental_clinic/login", tags=["Autenticação"])
+# def login(dados: UsuarioLogin = Body(...), db: Session = Depends(get_db)):
+#     try:
+#         usuario = db.query(Usuarios).filter(Usuarios.email == dados.email).first()
+#         if not usuario or not verificar_senha(dados.senha, usuario.senha_hash):
+#             logger.warning(f"Tentativa de login inválida para email: {dados.email}")
+#             raise HTTPException(status_code=401, detail="Credenciais inválidas")
+
+#         # pegar a clínica principal do usuário (pode expandir para várias depois)
+#         vinculo = db.execute(
+#             select("clinica_id").select_from("usuarios_clinicas")
+#             .where("usuario_id" == usuario.usuario_id)
+#         ).first()
+
+#         if not vinculo:
+#             raise HTTPException(status_code=403, detail="Usuário não vinculado a nenhuma clínica")
+
+#         token = criar_token({
+#             "sub": str(usuario.usuario_id),
+#             "clinica_id": str(vinculo.clinica_id)  # incluir tenant no JWT
+#         })
+
+#         logger.info(f"Token gerado com sucesso para usuário: {usuario.email}")
+#         return {
+#             "access_token": token,
+#             "token_type": "bearer",
+#             "expires_in": TEMPO_EXPIRACAO_TOKEN
+#         }
+#     except SQLAlchemyError as e:
+#         logger.error(f"Erro ao realizar login: {str(e)}")
+#         raise HTTPException(status_code=500, detail="Erro interno no servidor")
+
 @router.post("/v1/web/dental_clinic/login", tags=["Autenticação"])
 def login(dados: UsuarioLogin = Body(...), db: Session = Depends(get_db)):
     try:
@@ -31,19 +64,20 @@ def login(dados: UsuarioLogin = Body(...), db: Session = Depends(get_db)):
             logger.warning(f"Tentativa de login inválida para email: {dados.email}")
             raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
-        # pegar a clínica principal do usuário (pode expandir para várias depois)
-        vinculo = db.execute(
-            select("clinica_id").select_from("usuarios_clinicas")
-            .where("usuario_id" == usuario.usuario_id)
+        # Verifica se já existe vínculo com alguma clínica
+        vinculo = db.query(UsuariosClinicas).filter(
+            UsuariosClinicas.usuario_id == usuario.usuario_id
         ).first()
 
-        if not vinculo:
-            raise HTTPException(status_code=403, detail="Usuário não vinculado a nenhuma clínica")
-
-        token = criar_token({
-            "sub": str(usuario.usuario_id),
-            "clinica_id": str(vinculo.clinica_id)  # incluir tenant no JWT
-        })
+        if vinculo:
+            token = criar_token({
+                "sub": str(usuario.usuario_id),
+                "clinica_id": str(vinculo.clinica_id)   # inclui clinica_id
+            })
+        else:
+            token = criar_token({
+                "sub": str(usuario.usuario_id)          # sem clinica_id
+            })
 
         logger.info(f"Token gerado com sucesso para usuário: {usuario.email}")
         return {
@@ -51,10 +85,14 @@ def login(dados: UsuarioLogin = Body(...), db: Session = Depends(get_db)):
             "token_type": "bearer",
             "expires_in": TEMPO_EXPIRACAO_TOKEN
         }
-    except SQLAlchemyError as e:
+        
+    except HTTPException:
+        # re-levanta os erros de negócio sem mascarar
+        raise
+
+    except Exception as e:
         logger.error(f"Erro ao realizar login: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro interno no servidor")
-
 
 # Criar usuário
 @router.post("/v1/web/dental_clinic/usuarios", tags=["Autenticação"], response_model=UsuarioResposta)

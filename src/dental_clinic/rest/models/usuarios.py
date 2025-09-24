@@ -17,4 +17,4 @@ class Usuarios(Base):
     ultimo_login = Column(DateTime(timezone=True))
     criado_em = Column(DateTime(timezone=True), default=datetime.utcnow)
 
-    clinicas = relationship("UsuariosClinicas", back_populates="usuario")
+    clinicas = relationship("UsuariosClinicas", back_populates="usuario", cascade="all, delete")

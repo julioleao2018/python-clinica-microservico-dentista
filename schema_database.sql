@@ -1,5 +1,5 @@
 -- ===========================================================
---  Pacote SQL Multi-Tenant SaaS - Clínica Odonto
+--  Pacote SQL Multi-Tenant SaaS - Clínica Odonto (SEM RLS)
 -- ===========================================================
 
 -- 1) Extensão para UUID
@@ -8,7 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ===========================================================
 -- 2) Usuários globais
 -- ===========================================================
-CREATE TABLE usuarios (
+CREATE TABLE IF NOT EXISTS usuarios (
     usuario_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nome TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE usuarios (
 -- ===========================================================
 -- 3) Perfis de acesso (roles globais)
 -- ===========================================================
-CREATE TABLE perfis_acesso (
+CREATE TABLE IF NOT EXISTS perfis_acesso (
     perfil_id SERIAL PRIMARY KEY,
     nome TEXT UNIQUE NOT NULL,
     descricao TEXT
@@ -30,7 +30,7 @@ CREATE TABLE perfis_acesso (
 -- ===========================================================
 -- 4) Clínicas (tenants)
 -- ===========================================================
-CREATE TABLE clinicas (
+CREATE TABLE IF NOT EXISTS clinicas (
     clinica_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nome TEXT NOT NULL,
     telefone TEXT,
@@ -44,7 +44,7 @@ CREATE TABLE clinicas (
 -- ===========================================================
 -- 5) Relação usuários <-> clínicas (multi-tenant)
 -- ===========================================================
-CREATE TABLE usuarios_clinicas (
+CREATE TABLE IF NOT EXISTS usuarios_clinicas (
     usuario_id UUID NOT NULL REFERENCES usuarios(usuario_id) ON DELETE CASCADE,
     clinica_id UUID NOT NULL REFERENCES clinicas(clinica_id) ON DELETE CASCADE,
     perfil_id INT NOT NULL REFERENCES perfis_acesso(perfil_id),
@@ -52,12 +52,12 @@ CREATE TABLE usuarios_clinicas (
     PRIMARY KEY (usuario_id, clinica_id)
 );
 
-CREATE INDEX idx_usuarios_clinicas_clinica ON usuarios_clinicas(clinica_id);
+CREATE INDEX IF NOT EXISTS idx_usuarios_clinicas_clinica ON usuarios_clinicas(clinica_id);
 
 -- ===========================================================
 -- 6) Planos (catálogo de planos)
 -- ===========================================================
-CREATE TABLE planos (
+CREATE TABLE IF NOT EXISTS planos (
     plano_id SERIAL PRIMARY KEY,
     nome TEXT NOT NULL,
     descricao TEXT,
@@ -69,7 +69,7 @@ CREATE TABLE planos (
 -- ===========================================================
 -- 7) Assinaturas (cada clínica assina 1 plano por vez)
 -- ===========================================================
-CREATE TABLE assinaturas (
+CREATE TABLE IF NOT EXISTS assinaturas (
     assinatura_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     clinica_id UUID NOT NULL REFERENCES clinicas(clinica_id) ON DELETE CASCADE,
     plano_id INT NOT NULL REFERENCES planos(plano_id),
@@ -78,12 +78,12 @@ CREATE TABLE assinaturas (
     status TEXT CHECK (status IN ('trial', 'ativa', 'cancelada', 'expirada')) DEFAULT 'trial'
 );
 
-CREATE INDEX idx_assinaturas_clinica ON assinaturas(clinica_id);
+CREATE INDEX IF NOT EXISTS idx_assinaturas_clinica ON assinaturas(clinica_id);
 
 -- ===========================================================
 -- 8) Profissionais da clínica
 -- ===========================================================
-CREATE TABLE profissionais (
+CREATE TABLE IF NOT EXISTS profissionais (
     profissional_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     clinica_id UUID NOT NULL REFERENCES clinicas(clinica_id) ON DELETE CASCADE,
     nome TEXT NOT NULL,
@@ -94,59 +94,8 @@ CREATE TABLE profissionais (
     UNIQUE (clinica_id, email) -- o mesmo email pode existir em outra clínica
 );
 
-CREATE INDEX idx_profissionais_clinica ON profissionais(clinica_id);
+CREATE INDEX IF NOT EXISTS idx_profissionais_clinica ON profissionais(clinica_id);
 
 -- ===========================================================
--- 9) Função para isolamento multi-tenant (RLS)
--- ===========================================================
-CREATE OR REPLACE FUNCTION current_clinica_id()
-RETURNS uuid
-LANGUAGE sql
-STABLE
-AS $$
-  SELECT NULLIF(current_setting('app.clinica_id', true), '')::uuid
-$$;
-
--- ===========================================================
--- 10) Row Level Security (RLS)
--- ===========================================================
-
--- Clínicas
-ALTER TABLE clinicas ENABLE ROW LEVEL SECURITY;
-ALTER TABLE clinicas FORCE ROW LEVEL SECURITY;
-
-CREATE POLICY p_clinicas_isolamento
-ON clinicas
-USING (clinica_id = current_clinica_id())
-WITH CHECK (clinica_id = current_clinica_id());
-
--- Usuários_clinicas
-ALTER TABLE usuarios_clinicas ENABLE ROW LEVEL SECURITY;
-ALTER TABLE usuarios_clinicas FORCE ROW LEVEL SECURITY;
-
-CREATE POLICY p_usuarios_clinicas_isolamento
-ON usuarios_clinicas
-USING (clinica_id = current_clinica_id())
-WITH CHECK (clinica_id = current_clinica_id());
-
--- Assinaturas
-ALTER TABLE assinaturas ENABLE ROW LEVEL SECURITY;
-ALTER TABLE assinaturas FORCE ROW LEVEL SECURITY;
-
-CREATE POLICY p_assinaturas_isolamento
-ON assinaturas
-USING (clinica_id = current_clinica_id())
-WITH CHECK (clinica_id = current_clinica_id());
-
--- Profissionais
-ALTER TABLE profissionais ENABLE ROW LEVEL SECURITY;
-ALTER TABLE profissionais FORCE ROW LEVEL SECURITY;
-
-CREATE POLICY p_profissionais_isolamento
-ON profissionais
-USING (clinica_id = current_clinica_id())
-WITH CHECK (clinica_id = current_clinica_id());
-
--- ===========================================================
--- Fim do pacote
+--  Fim do pacote (SEM RLS)
 -- ===========================================================

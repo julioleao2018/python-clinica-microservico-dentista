@@ -51,16 +51,17 @@ app.include_router(main_routes.router)
 @app.middleware("http")
 async def set_tenant_header(request: Request, call_next):
     auth_header = request.headers.get("Authorization")
+    request.state.usuario_id = None
+    request.state.clinica_id = None
+
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.replace("Bearer ", "")
         try:
             payload = verificar_token(token)
-            clinica_id = payload.get("clinica_id")
-            if clinica_id:
-                db = next(get_db())
-                db.execute(text("SET LOCAL app.clinica_id = :cid"), {"cid": clinica_id})
+            request.state.usuario_id = payload.get("usuario_id")
+            request.state.clinica_id = payload.get("clinica_id")
         except Exception as e:
-            logger.warning(f"Token inválido para tenant: {e}")
+            logger.warning(f"Token inválido ou expirado: {e}")
 
     response = await call_next(request)
     return response

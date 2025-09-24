@@ -1,10 +1,14 @@
+import re
+
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from datetime import datetime, timedelta
 
 from rest.models import Usuarios, Clinicas, UsuariosClinicas, PerfisAcesso, Assinaturas, Planos
 from utilities.seguranca import gerar_hash_senha, criar_token, TEMPO_EXPIRACAO_TOKEN
 
+from fastapi import HTTPException
 
 # ========== Etapa 1: Criar Usuário ==========
 def registrar_usuario(dados: dict, db: Session):
@@ -45,17 +49,20 @@ def registrar_usuario(dados: dict, db: Session):
 # ========== Etapa 2: Criar Clínica ==========
 def registrar_clinica(dados: dict, usuario_id: str, db: Session):
     try:
-        # criar clínica (só aceita CNPJ)
+        # normalizar CNPJ
+        documento_limpo = re.sub(r"\D", "", dados["documento"])
+
         nova_clinica = Clinicas(
             nome=dados["nome"],
             telefone=dados.get("telefone"),
             tipo_documento="CNPJ",
-            documento=dados["documento"],
+            documento=documento_limpo,
             numero_profissionais=dados.get("numero_profissionais", 0),
-            criado_em=datetime.utcnow()
+            criado_em=datetime.utcnow(),
+            atualizado_em=datetime.utcnow(),
         )
         db.add(nova_clinica)
-        db.flush()
+        db.flush()  # gera clinica_id
 
         # garantir perfil admin
         perfil_admin = db.query(PerfisAcesso).filter(PerfisAcesso.nome == "admin").first()
@@ -95,13 +102,21 @@ def registrar_clinica(dados: dict, usuario_id: str, db: Session):
         db.add(assinatura)
         db.commit()
 
-        # token agora inclui clinica_id
+        # token com clinica_id agora
         token = criar_token({
             "sub": str(usuario_id),
             "clinica_id": str(nova_clinica.clinica_id)
         })
 
+        # busca usuário no banco (garantia de dados atualizados)
+        usuario = db.query(Usuarios).filter(Usuarios.usuario_id == usuario_id).first()
+
         return {
+            "usuario": {
+                "id": str(usuario.usuario_id),
+                "nome": usuario.nome,
+                "email": usuario.email
+            },
             "clinica": {
                 "id": str(nova_clinica.clinica_id),
                 "nome": nova_clinica.nome
@@ -115,6 +130,11 @@ def registrar_clinica(dados: dict, usuario_id: str, db: Session):
             "expires_in": TEMPO_EXPIRACAO_TOKEN
         }
 
-    except SQLAlchemyError as e:
+    except IntegrityError as e:
         db.rollback()
-        raise RuntimeError(f"Erro ao registrar clínica: {e}")
+        if "clinicas_documento_key" in str(e.orig):
+            raise HTTPException(status_code=409, detail="CNPJ já cadastrado.")
+        raise HTTPException(status_code=400, detail="Erro de integridade ao registrar clínica.")
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Erro ao registrar clínica.")

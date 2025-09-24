@@ -18,5 +18,5 @@ class Clinicas(Base):
     criado_em = Column(DateTime(timezone=True), default=datetime.utcnow)
     atualizado_em = Column(DateTime(timezone=True), default=datetime.utcnow)
 
-    usuarios = relationship("UsuariosClinicas", back_populates="clinica")
+    usuarios = relationship("UsuariosClinicas", back_populates="clinica", cascade="all, delete")
     assinaturas = relationship("Assinaturas", back_populates="clinica")
