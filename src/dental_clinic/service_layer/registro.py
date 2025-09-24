@@ -10,6 +10,9 @@ from utilities.seguranca import gerar_hash_senha, criar_token, TEMPO_EXPIRACAO_T
 
 from fastapi import HTTPException
 
+from util import initLog
+logger = initLog(__name__)
+
 # ========== Etapa 1: Criar Usuário ==========
 def registrar_usuario(dados: dict, db: Session):
     try:
@@ -51,11 +54,19 @@ def registrar_clinica(dados: dict, usuario_id: str, db: Session):
     try:
         # normalizar CNPJ
         documento_limpo = re.sub(r"\D", "", dados["documento"])
+        
+        tipo_documento = dados.get("tipo_documento", "").upper()
+        
+        logger.info(f"dados: {dados}")
+        logger.info(f"tipo documento: {tipo_documento}")
+        
+        if tipo_documento not in ["CNPJ", "CPF"]:
+            raise HTTPException(status_code=400, detail="Tipo de documento inválido. Use CNPJ ou CPF.")
 
         nova_clinica = Clinicas(
             nome=dados["nome"],
             telefone=dados.get("telefone"),
-            tipo_documento="CNPJ",
+            tipo_documento=tipo_documento,
             documento=documento_limpo,
             numero_profissionais=dados.get("numero_profissionais", 0),
             criado_em=datetime.utcnow(),

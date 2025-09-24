@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 from rest.models.usuarios import Usuarios
+from rest.models.perfis_acesso import PerfisAcesso
 from utilities.seguranca import criar_token, gerar_hash_senha, verificar_senha, verificar_token, TEMPO_EXPIRACAO_TOKEN
 from rest.database import get_db
 from rest.schemas.usuario import UsuarioLogin, UsuarioResposta
@@ -23,7 +24,6 @@ def get_healthcheck():
     logger.info("Healthcheck solicitado")
     return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "UP"})
 
-# Login
 # @router.post("/v1/web/dental_clinic/login", tags=["Autenticação"])
 # def login(dados: UsuarioLogin = Body(...), db: Session = Depends(get_db)):
 #     try:
@@ -32,19 +32,20 @@ def get_healthcheck():
 #             logger.warning(f"Tentativa de login inválida para email: {dados.email}")
 #             raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
-#         # pegar a clínica principal do usuário (pode expandir para várias depois)
-#         vinculo = db.execute(
-#             select("clinica_id").select_from("usuarios_clinicas")
-#             .where("usuario_id" == usuario.usuario_id)
+#         # Verifica se já existe vínculo com alguma clínica
+#         vinculo = db.query(UsuariosClinicas).filter(
+#             UsuariosClinicas.usuario_id == usuario.usuario_id
 #         ).first()
 
-#         if not vinculo:
-#             raise HTTPException(status_code=403, detail="Usuário não vinculado a nenhuma clínica")
-
-#         token = criar_token({
-#             "sub": str(usuario.usuario_id),
-#             "clinica_id": str(vinculo.clinica_id)  # incluir tenant no JWT
-#         })
+#         if vinculo:
+#             token = criar_token({
+#                 "sub": str(usuario.usuario_id),
+#                 "clinica_id": str(vinculo.clinica_id)   # inclui clinica_id
+#             })
+#         else:
+#             token = criar_token({
+#                 "sub": str(usuario.usuario_id)          # sem clinica_id
+#             })
 
 #         logger.info(f"Token gerado com sucesso para usuário: {usuario.email}")
 #         return {
@@ -52,9 +53,15 @@ def get_healthcheck():
 #             "token_type": "bearer",
 #             "expires_in": TEMPO_EXPIRACAO_TOKEN
 #         }
-#     except SQLAlchemyError as e:
+        
+#     except HTTPException:
+#         # re-levanta os erros de negócio sem mascarar
+#         raise
+
+#     except Exception as e:
 #         logger.error(f"Erro ao realizar login: {str(e)}")
 #         raise HTTPException(status_code=500, detail="Erro interno no servidor")
+
 
 @router.post("/v1/web/dental_clinic/login", tags=["Autenticação"])
 def login(dados: UsuarioLogin = Body(...), db: Session = Depends(get_db)):
@@ -69,30 +76,43 @@ def login(dados: UsuarioLogin = Body(...), db: Session = Depends(get_db)):
             UsuariosClinicas.usuario_id == usuario.usuario_id
         ).first()
 
+        payload = {"sub": str(usuario.usuario_id)}
+
         if vinculo:
-            token = criar_token({
-                "sub": str(usuario.usuario_id),
-                "clinica_id": str(vinculo.clinica_id)   # inclui clinica_id
-            })
+            payload["clinica_id"] = str(vinculo.clinica_id)
+
+            # Busca nome do perfil (admin, dentist, receptionist etc.)
+            perfil = db.query(PerfisAcesso).filter(
+                PerfisAcesso.perfil_id == vinculo.perfil_id
+            ).first()
+            if perfil:
+                payload["perfil"] = perfil.nome
         else:
-            token = criar_token({
-                "sub": str(usuario.usuario_id)          # sem clinica_id
-            })
+            # sem clínica, só o admin recém-criado pode logar
+            payload["perfil"] = "admin"
+
+        token = criar_token(payload)
 
         logger.info(f"Token gerado com sucesso para usuário: {usuario.email}")
         return {
+            "usuario": {
+                "id": str(usuario.usuario_id),
+                "nome": usuario.nome,
+                "email": usuario.email,
+                "perfil": payload["perfil"]
+            },
             "access_token": token,
             "token_type": "bearer",
             "expires_in": TEMPO_EXPIRACAO_TOKEN
         }
-        
+
     except HTTPException:
-        # re-levanta os erros de negócio sem mascarar
         raise
 
     except Exception as e:
         logger.error(f"Erro ao realizar login: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro interno no servidor")
+
 
 # Criar usuário
 @router.post("/v1/web/dental_clinic/usuarios", tags=["Autenticação"], response_model=UsuarioResposta)

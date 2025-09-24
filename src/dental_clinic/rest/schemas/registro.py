@@ -42,9 +42,9 @@ class RegistroUsuarioResponse(BaseModel):
 class RegistroClinicaRequest(BaseModel):
     nome: str
     telefone: Optional[str]
-    documento: constr(min_length=14, max_length=18)  # CNPJ
+    tipo_documento: str  # "CNPJ" ou "CPF"
+    documento: str
     numero_profissionais: Optional[int]
-
 
 class ClinicaResponse(BaseModel):
     id: str
