@@ -96,6 +96,38 @@ CREATE TABLE IF NOT EXISTS profissionais (
 
 CREATE INDEX IF NOT EXISTS idx_profissionais_clinica ON profissionais(clinica_id);
 
+
+-- ===========================================================
+-- 9) Configurações da clínica
+-- ===========================================================
+CREATE TABLE clinica_configuracoes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    clinica_id UUID NOT NULL REFERENCES clinicas(clinica_id) ON DELETE CASCADE,
+
+    -- Configurações
+    email TEXT,
+    fuso_horario TEXT,
+    logo_url TEXT,
+    cep TEXT,
+    endereco TEXT,
+    numero TEXT,
+    complemento TEXT,
+    bairro TEXT,
+    cidade TEXT,
+    estado TEXT,
+
+    -- Features
+    chat_interno BOOLEAN DEFAULT FALSE,
+    lista_espera BOOLEAN DEFAULT FALSE,
+    pesquisa_satisfacao BOOLEAN DEFAULT FALSE,
+    recebimento_tipo VARCHAR(20) DEFAULT 'clinic',
+
+    criado_em TIMESTAMPTZ DEFAULT NOW(),
+    atualizado_em TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_clinica_configuracoes_clinica ON clinica_configuracoes(clinica_id);
+
 -- ===========================================================
 --  Fim do pacote (SEM RLS)
 -- ===========================================================

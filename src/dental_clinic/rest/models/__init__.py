@@ -4,6 +4,7 @@ from .usuarios_clinicas import UsuariosClinicas
 from .perfis_acesso import PerfisAcesso
 from .planos import Planos
 from .assinaturas import Assinaturas
+from .clinica_configuracoes import ClinicaConfiguracoes
 
 __all__ = [
     "Usuarios",
@@ -12,4 +13,5 @@ __all__ = [
     "PerfisAcesso",
     "Planos",
     "Assinaturas",
+    "ClinicaConfiguracoes"
 ]

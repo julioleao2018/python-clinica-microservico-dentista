@@ -20,3 +20,5 @@ class Clinicas(Base):
 
     usuarios = relationship("UsuariosClinicas", back_populates="clinica", cascade="all, delete")
     assinaturas = relationship("Assinaturas", back_populates="clinica")
+
+    configuracoes = relationship("ClinicaConfiguracoes", back_populates="clinica", uselist=False, cascade="all, delete")

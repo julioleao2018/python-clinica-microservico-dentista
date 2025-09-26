@@ -76,7 +76,11 @@ def login(dados: UsuarioLogin = Body(...), db: Session = Depends(get_db)):
             UsuariosClinicas.usuario_id == usuario.usuario_id
         ).first()
 
-        payload = {"sub": str(usuario.usuario_id)}
+        payload = {
+            "sub": str(usuario.usuario_id),
+            "nome": usuario.nome,
+            "email": usuario.email,
+        }
 
         if vinculo:
             payload["clinica_id"] = str(vinculo.clinica_id)
@@ -88,7 +92,6 @@ def login(dados: UsuarioLogin = Body(...), db: Session = Depends(get_db)):
             if perfil:
                 payload["perfil"] = perfil.nome
         else:
-            # sem clínica, só o admin recém-criado pode logar
             payload["perfil"] = "admin"
 
         token = criar_token(payload)
@@ -99,19 +102,20 @@ def login(dados: UsuarioLogin = Body(...), db: Session = Depends(get_db)):
                 "id": str(usuario.usuario_id),
                 "nome": usuario.nome,
                 "email": usuario.email,
-                "perfil": payload["perfil"]
+                "perfil": payload["perfil"],
+                "clinica_id": payload.get("clinica_id"),
             },
             "access_token": token,
             "token_type": "bearer",
-            "expires_in": TEMPO_EXPIRACAO_TOKEN
+            "expires_in": TEMPO_EXPIRACAO_TOKEN,
         }
 
     except HTTPException:
         raise
-
     except Exception as e:
         logger.error(f"Erro ao realizar login: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro interno no servidor")
+
 
 
 # Criar usuário

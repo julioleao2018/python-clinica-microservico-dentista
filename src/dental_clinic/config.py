@@ -77,6 +77,12 @@ def get_postgres_db_port():
 def get_postgres_db_name():
     return G_CONST.CONST.get('APP_POSTGRESQL_DB_NAME', '')
 
+def get_aws_key():
+    return G_CONST.CONST.get('APP_AWS_ACCESS_KEY_ID', '')
+
+def get_aws_secret_key():
+    return G_CONST.CONST.get('APP_AWS_SECRET_ACCESS_KEY', '')
+
 def str_to_boolean(value):
     if isinstance(value, str):
         if value.lower() in ['true', 't', 'y', 'yes', 'yeah']:

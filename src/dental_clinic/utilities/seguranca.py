@@ -5,7 +5,11 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 # Hash de senha
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["argon2", "pbkdf2_sha256"],
+    default="argon2",
+    deprecated="auto"
+)
 
 def gerar_hash_senha(senha: str) -> str:
     return pwd_context.hash(senha)
