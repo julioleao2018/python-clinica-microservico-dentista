@@ -12,12 +12,14 @@ AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET_LOGOS", "clinicas-logos-sp")
 AWS_S3_PUBLIC = os.getenv("AWS_S3_PUBLIC", "true").lower() == "true"
 AWS_S3_BASEURL = os.getenv("AWS_S3_BASEURL", "").strip()
 
-_s3 = boto3.client(
-    "s3",
-    region_name=AWS_REGION,
-    aws_access_key_id=config.get_aws_key(),
-    aws_secret_access_key=config.get_aws_secret_key(),
-)
+# _s3 = boto3.client(
+#     "s3",
+#     region_name=AWS_REGION,
+#     aws_access_key_id=config.get_aws_key(),
+#     aws_secret_access_key=config.get_aws_secret_key(),
+# )
+
+_s3 = boto3.client("s3", region_name=AWS_REGION)
 
 def _sanitize_filename(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]", "_", name)
