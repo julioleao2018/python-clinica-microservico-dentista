@@ -35,7 +35,7 @@ origins = [
     "http://react-clinica-dental-site-sp.s3-website-sa-east-1.amazonaws.com",
     "https://clinica-alb-XXXXXXXX.sa-east-1.elb.amazonaws.com",  # seu ALB
     # depois, quando for mudar CloudFront/Route53:
-    # "https://meu-dominio.com",
+    "https://d3j95xtv38y7ok.cloudfront.net"
 ]
 
 app.add_middleware(
